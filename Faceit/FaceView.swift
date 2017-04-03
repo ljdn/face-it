@@ -12,6 +12,10 @@ class FaceView: UIView {
     
     var scale: CGFloat = 0.9
     
+    var eyesOpen: Bool = false
+    
+    var mouthCurvature: Double = 1.0 // 1.0 = smile, -1.0 = frown
+    
     private var skullRadius: CGFloat {
         return min(bounds.size.width, bounds.size.height) / 2 * scale
     }
@@ -36,8 +40,39 @@ class FaceView: UIView {
         let eyeRadius = skullRadius / Ratios.skullRadiusToEyeRadius
         let eyeCenter = centerOfEye(eye)
         
-        let path = UIBezierPath(arcCenter: eyeCenter, radius: eyeRadius, startAngle: 0, endAngle: CGFloat.pi * 2, clockwise: true)
+        let path: UIBezierPath
+        if eyesOpen {
+            path = UIBezierPath(arcCenter: eyeCenter, radius: eyeRadius, startAngle: 0, endAngle: CGFloat.pi * 2, clockwise: true)
+        } else {
+            path = UIBezierPath()
+            path.move(to: CGPoint(x: eyeCenter.x - eyeRadius, y: eyeCenter.y))
+            path.addLine(to: CGPoint(x: eyeCenter.x + eyeRadius, y: eyeCenter.y))
+        }
+        
         path.lineWidth = 5.0
+        return path
+    }
+    
+    private func pathForMouth() -> UIBezierPath {
+        let mouthWidth = skullRadius / Ratios.skullRadiusToMouthWidth
+        let mouthHeight = skullRadius / Ratios.skullRadiusToMouthHeight
+        let mouthOffset = skullRadius / Ratios.skullRadiusToMouthOffset
+        
+        let mouthRect = CGRect(x: skullCenter.x - mouthWidth / 2, y:  skullCenter.y + mouthOffset, width: mouthWidth, height: mouthHeight)
+        
+        let smileOffset: CGFloat = CGFloat(mouthCurvature) * mouthRect.height
+        
+        let start = CGPoint(x: mouthRect.minX, y: mouthRect.midY)
+        let end = CGPoint(x: mouthRect.maxX, y: mouthRect.midY)
+        
+        let cp1 = CGPoint(x: start.x + mouthRect.width / 3, y: start.y + smileOffset)
+        let cp2 = CGPoint(x: end.x - mouthRect.width / 3, y: end.y + smileOffset)
+        
+        let path = UIBezierPath()
+        path.move(to: start)
+        path.addCurve(to: end, controlPoint1: cp1, controlPoint2: cp2)
+        path.lineWidth = 5.0
+        
         return path
     }
     
@@ -52,6 +87,7 @@ class FaceView: UIView {
         pathForSkull().stroke()
         pathForEye(.left).stroke()
         pathForEye(.right).stroke()
+        pathForMouth().stroke()
     }
 
     private struct Ratios {
@@ -59,7 +95,7 @@ class FaceView: UIView {
         static let skullRadiusToEyeRadius: CGFloat = 10
         static let skullRadiusToMouthWidth: CGFloat = 1
         static let skullRadiusToMouthHeight: CGFloat = 3
-        static let skullRadiusToMouthOffset = 3
+        static let skullRadiusToMouthOffset: CGFloat = 3
     }
 
 }
